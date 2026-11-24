@@ -201,6 +201,36 @@ internal static class SubtitleFile
         return list.Count > 0 ? list[0].Path : null;
     }
 
+    /// <summary>
+    /// Sidecar to auto-load instead of live ASR + MT. When translating to Vietnamese, only a
+    /// Vietnamese sidecar counts — any other-language sidecar is skipped so the video still gets
+    /// a Vietnamese translation. Other targets keep the original "any sidecar" behaviour.
+    /// </summary>
+    public static string? FindAutoSidecar(string mediaPath, AppSettings settings)
+    {
+        if (!settings.TranslateEnabled || !TranslateTargets.IsVietnamese(settings))
+            return FindExistingSubtitle(mediaPath);
+        foreach (var s in FindAllExistingSidecars(mediaPath))
+        {
+            if (IsVietnameseTag(s.Tag))
+                return s.Path;
+        }
+        return null;
+    }
+
+    private static bool IsVietnameseTag(string? tag)
+    {
+        var raw = (tag ?? "").Trim();
+        if (raw.Length == 0) return false;
+        var t = raw.ToLowerInvariant().Replace('_', '-');
+        if (t is "vi" or "vie" or "vn" or "viet" or "vietnamese" or "vietsub" or "tiengviet" or "tieng-viet")
+            return true;
+        if (t.StartsWith("vi-", StringComparison.Ordinal) || t.StartsWith("vie-", StringComparison.Ordinal))
+            return true;
+        return raw.Contains("việt", StringComparison.OrdinalIgnoreCase)
+            || raw.Contains("viet", StringComparison.OrdinalIgnoreCase);
+    }
+
     // Short-lived per-directory listing so playlist badges / multi-sidecar UI do not
     // EnumerateFiles the whole folder on every chrome tick or per-row check.
     private static readonly object DirListCacheLock = new();

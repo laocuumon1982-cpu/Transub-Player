@@ -779,7 +779,7 @@ internal sealed class PreviewController : IDisposable
             if (pref == SubtitleSourceKind.Local)
                 existing = SubtitleFile.FindExistingSubtitle(path);
             else if (pref == SubtitleSourceKind.Live && _settings.PreferExternalSubtitle)
-                existing = SubtitleFile.FindExistingSubtitle(path);
+                existing = SubtitleFile.FindAutoSidecar(path, _settings);
             var preferExternalMissed = false;
             if (existing is null
                 && (pref == SubtitleSourceKind.Local

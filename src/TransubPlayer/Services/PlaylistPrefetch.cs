@@ -124,7 +124,7 @@ internal sealed class PlaylistPrefetch
                 if (!File.Exists(path)) continue;
                 if (PreviewPaths.HasReadyAsr(path)) continue;
                 if (_settings.PreferExternalSubtitle
-                    && SubtitleFile.FindExistingSubtitle(path) is not null)
+                    && SubtitleFile.FindAutoSidecar(path, _settings) is not null)
                     continue;
                 if (_queue.Any(p => string.Equals(p, path, StringComparison.OrdinalIgnoreCase))) continue;
                 var live = _liveMediaPath();
@@ -288,7 +288,7 @@ internal sealed class PlaylistPrefetch
         }
 
         if (_settings.PreferExternalSubtitle
-            && SubtitleFile.FindExistingSubtitle(mediaPath) is not null)
+            && SubtitleFile.FindAutoSidecar(mediaPath, _settings) is not null)
         {
             _log($"列表预生成跳过 · 已有外挂字幕 · {name}");
             return;

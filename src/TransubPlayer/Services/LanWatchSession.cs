@@ -118,7 +118,7 @@ internal sealed class LanWatchSession : IDisposable
         SubtitleFile.InvalidateDirectoryListingCache(Path.GetDirectoryName(mediaPath));
         if (_settings.PreferExternalSubtitle)
         {
-            var existing = SubtitleFile.FindExistingSubtitle(mediaPath);
+            var existing = SubtitleFile.FindAutoSidecar(mediaPath, _settings);
             if (existing is not null && TryLoadExternalSidecar(existing))
             {
                 _reusedCache = true;

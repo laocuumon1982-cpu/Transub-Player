@@ -40,8 +40,8 @@ public sealed class AppSettings
     public string SubtitleMode { get; set; } = "zh";
     /// <summary>Incremental preview MT via local translation model. Default on; falls back to source if llama-server is down.</summary>
     public bool TranslateEnabled { get; set; } = true;
-    /// <summary>Preview translation language: zh (default) | zh-Hant | en | es | ja | ko.</summary>
-    public string TranslateTarget { get; set; } = TranslateTargets.Zh;
+    /// <summary>Preview translation language: vi (default) | zh | zh-Hant | en | es | ja | ko.</summary>
+    public string TranslateTarget { get; set; } = TranslateTargets.Vi;
     /// <summary>
     /// Local MT GGUF preference: <c>translategemma-4b-q4</c> (default) or <c>murasaki-4b-iq4xs</c>.
     /// </summary>
@@ -310,6 +310,8 @@ public sealed class AppSettings
         return FreshDefaults();
     }
 
+    private const string ViDefaultMigrationId = "vi-default-target-1";
+
     /// <summary>First-run defaults: UI follows OS; HF mirror follows region; MT target follows UI.</summary>
     private static AppSettings FreshDefaults()
     {
@@ -318,7 +320,8 @@ public sealed class AppSettings
             UiLanguage = UiLanguages.Auto,
             HfEndpoint = HfEndpoints.Default(),
         };
-        settings.TranslateTarget = TranslateTargets.FromUiLanguage(settings.UiLanguage);
+        settings.TranslateTarget = TranslateTargets.Vi;
+        settings.DismissedTips.Add(ViDefaultMigrationId);
         return settings;
     }
 
@@ -478,9 +481,20 @@ public sealed class AppSettings
             settings.AsrGpuDevice = AsrGpuDevices.Normalize(settings.AsrGpuDevice);
             settings.TranslateModelId = TranslateModels.Normalize(settings.TranslateModelId);
             if (!root.TryGetProperty("translateTarget", out _))
-                settings.TranslateTarget = TranslateTargets.FromUiLanguage(settings.UiLanguage);
+                settings.TranslateTarget = TranslateTargets.Vi;
             else
                 settings.TranslateTarget = TranslateTargets.Normalize(settings.TranslateTarget);
+
+            // One-time switch for existing installs: every opened video auto-translates to Vietnamese.
+            // After this runs once, the user can still pick another target in Settings.
+            if (!settings.DismissedTips.Any(t => string.Equals(t, ViDefaultMigrationId, StringComparison.OrdinalIgnoreCase)))
+            {
+                settings.TranslateTarget = TranslateTargets.Vi;
+                settings.TranslateEnabled = true;
+                settings.AutoStartPreview = true;
+                settings.SubtitleMode = "zh";
+                settings.DismissedTips.Add(ViDefaultMigrationId);
+            }
 
             if (!root.TryGetProperty("transubInstallPath", out _))
             {
