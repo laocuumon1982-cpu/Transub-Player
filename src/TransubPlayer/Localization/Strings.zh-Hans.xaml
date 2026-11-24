@@ -1060,6 +1060,7 @@
     <sys:String x:Key="Str.Settings.TranslateTarget.Es">西班牙语</sys:String>
     <sys:String x:Key="Str.Settings.TranslateTarget.Ja">日语</sys:String>
     <sys:String x:Key="Str.Settings.TranslateTarget.Ko">韩语</sys:String>
+    <sys:String x:Key="Str.Settings.TranslateTarget.Vi">越南语</sys:String>
     <!-- 底栏短标签：闭合态与下拉共用 -->
     <sys:String x:Key="Str.Settings.TranslateTarget.Short.Zh">简体</sys:String>
     <sys:String x:Key="Str.Settings.TranslateTarget.Short.ZhHant">繁体</sys:String>
@@ -1067,6 +1068,7 @@
     <sys:String x:Key="Str.Settings.TranslateTarget.Short.Es">西语</sys:String>
     <sys:String x:Key="Str.Settings.TranslateTarget.Short.Ja">日语</sys:String>
     <sys:String x:Key="Str.Settings.TranslateTarget.Short.Ko">韩语</sys:String>
+    <sys:String x:Key="Str.Settings.TranslateTarget.Short.Vi">越语</sys:String>
     <sys:String x:Key="Str.SourceLang.Auto">自动</sys:String>
     <sys:String x:Key="Str.SourceLang.Ja">日语</sys:String>
     <sys:String x:Key="Str.SourceLang.Ko">韩语</sys:String>

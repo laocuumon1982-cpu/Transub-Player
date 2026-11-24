@@ -122,6 +122,7 @@ public partial class MainWindow
         TranslateTargets.Es => Loc.Get("Settings.TranslateTarget.Short.Es"),
         TranslateTargets.Ja => Loc.Get("Settings.TranslateTarget.Short.Ja"),
         TranslateTargets.Ko => Loc.Get("Settings.TranslateTarget.Short.Ko"),
+        TranslateTargets.Vi => Loc.Get("Settings.TranslateTarget.Short.Vi"),
         TranslateTargets.ZhHant => Loc.Get("Settings.TranslateTarget.Short.ZhHant"),
         _ => Loc.Get("Settings.TranslateTarget.Short.Zh"),
     };
@@ -132,6 +133,7 @@ public partial class MainWindow
         TranslateTargets.Es => Loc.Get("Settings.TranslateTarget.Es"),
         TranslateTargets.Ja => Loc.Get("Settings.TranslateTarget.Ja"),
         TranslateTargets.Ko => Loc.Get("Settings.TranslateTarget.Ko"),
+        TranslateTargets.Vi => Loc.Get("Settings.TranslateTarget.Vi"),
         TranslateTargets.ZhHant => Loc.Get("Settings.TranslateTarget.ZhHant"),
         _ => Loc.Get("Settings.TranslateTarget.Zh"),
     };

@@ -1060,6 +1060,7 @@
     <sys:String x:Key="Str.Settings.TranslateTarget.Es">스페인어</sys:String>
     <sys:String x:Key="Str.Settings.TranslateTarget.Ja">일본어</sys:String>
     <sys:String x:Key="Str.Settings.TranslateTarget.Ko">한국어</sys:String>
+    <sys:String x:Key="Str.Settings.TranslateTarget.Vi">베트남어</sys:String>
     <!-- Control-bar short labels (closed + dropdown) -->
     <sys:String x:Key="Str.Settings.TranslateTarget.Short.Zh">간체</sys:String>
     <sys:String x:Key="Str.Settings.TranslateTarget.Short.ZhHant">번체</sys:String>
@@ -1067,6 +1068,7 @@
     <sys:String x:Key="Str.Settings.TranslateTarget.Short.Es">ES</sys:String>
     <sys:String x:Key="Str.Settings.TranslateTarget.Short.Ja">일본어</sys:String>
     <sys:String x:Key="Str.Settings.TranslateTarget.Short.Ko">한국어</sys:String>
+    <sys:String x:Key="Str.Settings.TranslateTarget.Short.Vi">VI</sys:String>
     <sys:String x:Key="Str.SourceLang.Auto">자동</sys:String>
     <sys:String x:Key="Str.SourceLang.Ja">일본어</sys:String>
     <sys:String x:Key="Str.SourceLang.Ko">한국어</sys:String>

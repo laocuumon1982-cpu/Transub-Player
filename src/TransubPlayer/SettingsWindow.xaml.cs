@@ -145,6 +145,7 @@ public partial class SettingsWindow : Window
         new(Loc.Get("Settings.TranslateTarget.Es"), TranslateTargets.Es),
         new(Loc.Get("Settings.TranslateTarget.Ja"), TranslateTargets.Ja),
         new(Loc.Get("Settings.TranslateTarget.Ko"), TranslateTargets.Ko),
+        new(Loc.Get("Settings.TranslateTarget.Vi"), TranslateTargets.Vi),
     ];
 
     private static LabeledOption[] BuildUiLanguageOptions()

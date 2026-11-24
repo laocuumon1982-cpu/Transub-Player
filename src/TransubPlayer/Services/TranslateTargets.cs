@@ -12,8 +12,9 @@ internal static class TranslateTargets
     public const string Es = "es";
     public const string Ja = "ja";
     public const string Ko = "ko";
+    public const string Vi = "vi";
 
-    public static readonly string[] All = [Zh, ZhHant, En, Es, Ja, Ko];
+    public static readonly string[] All = [Zh, ZhHant, En, Es, Ja, Ko, Vi];
 
     public static string Normalize(string? raw)
     {
@@ -26,6 +27,7 @@ internal static class TranslateTargets
             Es or "spa" or "esp" or "spanish" or "español" or "espanol" => Es,
             Ja or "jp" or "japanese" => Ja,
             Ko or "kr" or "korean" => Ko,
+            Vi or "vie" or "vn" or "vi-vn" or "vi_vn" or "vietnamese" or "tiếng việt" or "tieng viet" => Vi,
             "zh-hant" or "zh-tw" or "zh-hk" or "zh-mo" or "zht" or "hant"
                 or "traditional" or "traditional-chinese" or "zh_hant" or "zh_tw" => ZhHant,
             Zh or "cn" or "zh-cn" or "zh-hans" or "zh_hans" or "zh_cn"
@@ -46,6 +48,7 @@ internal static class TranslateTargets
     public static bool IsTraditionalChinese(string? target) => Normalize(target) == ZhHant;
     public static bool IsJapanese(string? target) => Normalize(target) == Ja;
     public static bool IsKorean(string? target) => Normalize(target) == Ko;
+    public static bool IsVietnamese(string? target) => Normalize(target) == Vi;
 
     public static bool IsEnglish(AppSettings settings) => IsEnglish(settings.TranslateTarget);
     public static bool IsSpanish(AppSettings settings) => IsSpanish(settings.TranslateTarget);
@@ -54,6 +57,7 @@ internal static class TranslateTargets
     public static bool IsTraditionalChinese(AppSettings settings) => IsTraditionalChinese(settings.TranslateTarget);
     public static bool IsJapanese(AppSettings settings) => IsJapanese(settings.TranslateTarget);
     public static bool IsKorean(AppSettings settings) => IsKorean(settings.TranslateTarget);
+    public static bool IsVietnamese(AppSettings settings) => IsVietnamese(settings.TranslateTarget);
 
     /// <summary>Sidecar / cache filename segment (safe on Windows).</summary>
     public static string FileSuffix(string? target) => Normalize(target) switch
@@ -63,6 +67,7 @@ internal static class TranslateTargets
         Es => Es,
         Ja => Ja,
         Ko => Ko,
+        Vi => Vi,
         _ => Zh,
     };
 
@@ -72,6 +77,7 @@ internal static class TranslateTargets
         Es => "Spanish",
         Ja => "Japanese",
         Ko => "Korean",
+        Vi => "Vietnamese",
         ZhHant => "Traditional Chinese",
         _ => "Simplified Chinese",
     };
@@ -82,6 +88,7 @@ internal static class TranslateTargets
         Es => "西班牙语",
         Ja => "日语",
         Ko => "韩语",
+        Vi => "越南语",
         ZhHant => "繁体中文",
         _ => "简体中文",
     };
@@ -101,6 +108,8 @@ internal static class TranslateTargets
             return Ja;
         if (tag.StartsWith("ko", StringComparison.OrdinalIgnoreCase))
             return Ko;
+        if (tag.StartsWith("vi", StringComparison.OrdinalIgnoreCase))
+            return Vi;
         if (tag.StartsWith("zh-Hant", StringComparison.OrdinalIgnoreCase)
             || tag.StartsWith("zh-TW", StringComparison.OrdinalIgnoreCase)
             || tag.StartsWith("zh-HK", StringComparison.OrdinalIgnoreCase))

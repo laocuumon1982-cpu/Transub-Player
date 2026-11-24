@@ -1060,6 +1060,7 @@ speed [ / ] · fullscreen F/F11/Enter · top T · help F1</sys:String>
     <sys:String x:Key="Str.Settings.TranslateTarget.Es">Spanish</sys:String>
     <sys:String x:Key="Str.Settings.TranslateTarget.Ja">Japanese</sys:String>
     <sys:String x:Key="Str.Settings.TranslateTarget.Ko">Korean</sys:String>
+    <sys:String x:Key="Str.Settings.TranslateTarget.Vi">Vietnamese</sys:String>
     <!-- Control-bar short labels (closed + dropdown) -->
     <sys:String x:Key="Str.Settings.TranslateTarget.Short.Zh">SC</sys:String>
     <sys:String x:Key="Str.Settings.TranslateTarget.Short.ZhHant">TC</sys:String>
@@ -1067,6 +1068,7 @@ speed [ / ] · fullscreen F/F11/Enter · top T · help F1</sys:String>
     <sys:String x:Key="Str.Settings.TranslateTarget.Short.Es">ES</sys:String>
     <sys:String x:Key="Str.Settings.TranslateTarget.Short.Ja">JA</sys:String>
     <sys:String x:Key="Str.Settings.TranslateTarget.Short.Ko">KO</sys:String>
+    <sys:String x:Key="Str.Settings.TranslateTarget.Short.Vi">VI</sys:String>
     <sys:String x:Key="Str.SourceLang.Auto">Auto</sys:String>
     <sys:String x:Key="Str.SourceLang.Ja">Japanese</sys:String>
     <sys:String x:Key="Str.SourceLang.Ko">Korean</sys:String>

@@ -79,8 +79,10 @@ public partial class SetupWizardWindow : Window
             new LabeledOption(Loc.Get("Settings.TranslateTarget.Zh"), TranslateTargets.Zh),
             new LabeledOption(Loc.Get("Settings.TranslateTarget.ZhHant"), TranslateTargets.ZhHant),
             new LabeledOption(Loc.Get("Settings.TranslateTarget.En"), TranslateTargets.En),
+            new LabeledOption(Loc.Get("Settings.TranslateTarget.Es"), TranslateTargets.Es),
             new LabeledOption(Loc.Get("Settings.TranslateTarget.Ja"), TranslateTargets.Ja),
             new LabeledOption(Loc.Get("Settings.TranslateTarget.Ko"), TranslateTargets.Ko),
+            new LabeledOption(Loc.Get("Settings.TranslateTarget.Vi"), TranslateTargets.Vi),
         };
         TranslateTargetBox.DisplayMemberPath = nameof(LabeledOption.Label);
         TranslateTargetBox.SelectedValuePath = nameof(LabeledOption.Value);
