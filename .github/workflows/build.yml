@@ -5,6 +5,9 @@ on:
     branches: [main, master]
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
   build:
     runs-on: windows-latest
@@ -33,3 +36,15 @@ jobs:
         with:
           name: TransubPlayer-setup
           path: artifacts/pack/*-setup.exe
+
+      # Phát hành bản mới để Win AIO (nút Transub-Player) tải được mà không cần đăng nhập GitHub
+      - name: Publish release
+        if: github.event_name == 'push'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: build-${{ github.run_number }}
+          name: Transub-Player build ${{ github.run_number }}
+          make_latest: true
+          files: |
+            artifacts/pack/*-setup.exe
+            artifacts/pack/TransubPlayer-*-win-x64.zip
