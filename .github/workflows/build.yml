@@ -1,0 +1,35 @@
+name: Build Windows exe
+
+on:
+  push:
+    branches: [main, master]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Install Inno Setup
+        run: choco install innosetup -y --no-progress
+
+      - name: Pack (portable + installer)
+        shell: pwsh
+        run: powershell -NoProfile -ExecutionPolicy Bypass -File tools\pack-release.ps1 -Target All
+
+      - name: Upload portable zip
+        uses: actions/upload-artifact@v4
+        with:
+          name: TransubPlayer-portable
+          path: artifacts/pack/TransubPlayer-*-win-x64.zip
+
+      - name: Upload installer
+        uses: actions/upload-artifact@v4
+        with:
+          name: TransubPlayer-setup
+          path: artifacts/pack/*-setup.exe
