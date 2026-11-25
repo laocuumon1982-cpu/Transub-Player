@@ -529,6 +529,7 @@
                                     </StackPanel>
                                     <CheckBox x:Name="MtGpuShareBox" Content="{loc:Loc Settings.MtGpuShare}" IsThreeState="True"/>
                                     <TextBlock Style="{StaticResource Hint}" Text="{loc:Loc Settings.MtGpuShare.Hint}"/>
+                                    <CheckBox x:Name="UseCudaBox" Content="{loc:Loc Settings.UseCuda}"/>
                                     <CheckBox x:Name="AutoPreviewBox" Content="{loc:Loc Settings.AutoPreview}"
                                               Checked="DependencyGate_Changed" Unchecked="DependencyGate_Changed"/>
                                     <CheckBox x:Name="TranslateBox" Content="{loc:Loc Settings.Translate}"

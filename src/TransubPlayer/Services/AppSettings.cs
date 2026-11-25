@@ -54,6 +54,10 @@ public sealed class AppSettings
     /// <summary>Parallel llama-server slots / concurrent MT requests (1–8). Default 4.</summary>
     public int MtParallel { get; set; } = 4;
     /// <summary>
+    /// NVIDIA only: download and prefer the CUDA runtime for Whisper and llama-server (Vulkan stays as fallback).
+    /// </summary>
+    public bool UseCuda { get; set; } = true;
+    /// <summary>
     /// On open (no Vietnamese sidecar yet): pause, recognise + translate the whole video first,
     /// save the subtitle into <see cref="SubLibraryDir"/>, then play with it — no live lag.
     /// </summary>
@@ -372,6 +376,7 @@ public sealed class AppSettings
         TranslateUrl = copy.TranslateUrl;
         MtGpuShare = GpuShare.Normalize(copy.MtGpuShare);
         MtParallel = Math.Clamp(copy.MtParallel, 1, 8);
+        UseCuda = copy.UseCuda;
         PreTranslateBeforePlay = copy.PreTranslateBeforePlay;
         SubLibraryDir = copy.SubLibraryDir ?? "";
         AutoStartPreview = copy.AutoStartPreview;

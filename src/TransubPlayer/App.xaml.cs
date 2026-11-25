@@ -53,6 +53,8 @@ public partial class App : System.Windows.Application
         Loc.Apply(bootSettings.UiLanguage);
         // Pin Whisper runtime order before any WhisperFactory can load a sticky native lib.
         AsrRuntime.Apply(bootSettings);
+        // NVIDIA: fetch the CUDA pack in the background (used from next MT start / next app launch).
+        _ = Task.Run(() => CudaRuntime.EnsureAsync(bootSettings, PlayerLog.WriteEngine, CancellationToken.None));
 
         if (!SingleInstanceHost.TryBecomePrimary(out var startupArgs))
         {

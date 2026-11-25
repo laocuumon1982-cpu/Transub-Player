@@ -203,6 +203,7 @@ public partial class SettingsWindow : Window
         PreferExternalBox.IsChecked = _settings.PreferExternalSubtitle;
         SubtitleCatBox.IsChecked = _settings.FetchSubtitleFromSubtitleCat;
         PreTranslateBox.IsChecked = _settings.PreTranslateBeforePlay;
+        UseCudaBox.IsChecked = _settings.UseCuda;
         // Three-state: indeterminate = auto (share when GPU ≥ 8 GB).
         MtGpuShareBox.IsChecked = GpuShare.Normalize(_settings.MtGpuShare) switch
         {
@@ -484,6 +485,7 @@ public partial class SettingsWindow : Window
         _settings.PreferExternalSubtitle = PreferExternalBox.IsChecked != false;
         _settings.FetchSubtitleFromSubtitleCat = SubtitleCatBox.IsChecked == true;
         _settings.PreTranslateBeforePlay = PreTranslateBox.IsChecked == true;
+        _settings.UseCuda = UseCudaBox.IsChecked == true;
         _settings.MtGpuShare = MtGpuShareBox.IsChecked switch
         {
             true => GpuShare.On,

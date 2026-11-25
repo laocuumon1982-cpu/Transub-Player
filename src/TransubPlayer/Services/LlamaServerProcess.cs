@@ -203,11 +203,21 @@ internal sealed class LlamaServerProcess : IDisposable
 
         // Prefer GPU; when ASR already holds VRAM, try CPU first to avoid multi-minute ngl retries.
         // Locals survive Stop() — Stop only kills the process, not the chosen exe/GGUF paths.
-        var exe = ExePath ?? throw new InvalidOperationException("llama-server 路径未解析");
+        var vulkanExe = ExePath ?? throw new InvalidOperationException("llama-server 路径未解析");
         var model = ModelPath ?? throw new InvalidOperationException("翻译 GGUF 路径未解析");
         Exception? last = null;
         var nglOrder = preferCpu ? new[] { 0, 20, 40 } : new[] { 99, 40, 20, 0 };
-        foreach (var ngl in nglOrder)
+        // NVIDIA: try the CUDA build first (GPU layers only), then the bundled Vulkan build as before.
+        var attempts = new List<(string Exe, int Ngl)>();
+        var cudaExe = CudaRuntime.LlamaExe(settings);
+        if (cudaExe is not null && !preferCpu)
+        {
+            CudaRuntime.PrependPath();
+            attempts.Add((cudaExe, 99));
+        }
+        foreach (var n in nglOrder)
+            attempts.Add((vulkanExe, n));
+        foreach (var (exe, ngl) in attempts)
         {
             ct.ThrowIfCancellationRequested();
             Stop();
@@ -224,7 +234,8 @@ internal sealed class LlamaServerProcess : IDisposable
                     Spawned = true;
                     ExePath = exe;
                     ModelPath = model;
-                    log?.Invoke($"翻译模型已启动 · {Path.GetFileName(model)} · ngl={ngl} · {url}");
+                    log?.Invoke($"翻译模型已启动 · {Path.GetFileName(model)} · ngl={ngl} · "
+                                + (ReferenceEquals(exe, cudaExe) ? "CUDA" : "Vulkan/CPU") + $" · {url}");
                     return;
                 }
 

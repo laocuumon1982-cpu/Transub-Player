@@ -1058,6 +1058,7 @@
     <sys:String x:Key="Str.Settings.PreTranslate.OpenFolder">Subs フォルダーを開く</sys:String>
     <sys:String x:Key="Str.Settings.MtGpuShare">認識中も翻訳を GPU で実行（中間 = 自動、VRAM 8 GB 以上）</sys:String>
     <sys:String x:Key="Str.Settings.MtGpuShare.Hint">大容量 GPU（例: RTX 3060 12 GB）では Whisper と翻訳を同時に実行でき、翻訳が速くなります。</sys:String>
+    <sys:String x:Key="Str.Settings.UseCuda">NVIDIA GPU で CUDA を使用（約 620 MB を自動ダウンロード、Vulkan に自動フォールバック、再起動後に有効）</sys:String>
     <sys:String x:Key="Str.Settings.AutoPreview">サイドカーがないとき ASR を自動開始</sys:String>
     <sys:String x:Key="Str.Settings.Translate">翻訳：利用可能ならローカルモデル；なければまず原文</sys:String>
     <sys:String x:Key="Str.Settings.TranslateTarget">訳文言語</sys:String>

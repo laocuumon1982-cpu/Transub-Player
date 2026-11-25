@@ -1058,6 +1058,7 @@ speed [ / ] · fullscreen F/F11/Enter · top T · help F1</sys:String>
     <sys:String x:Key="Str.Settings.PreTranslate.OpenFolder">Open Subs folder</sys:String>
     <sys:String x:Key="Str.Settings.MtGpuShare">Keep translation on GPU while recognizing (filled = auto, GPU ≥ 8 GB)</sys:String>
     <sys:String x:Key="Str.Settings.MtGpuShare.Hint">Big GPUs (e.g. RTX 3060 12 GB) run Whisper and the translator together — much faster translation.</sys:String>
+    <sys:String x:Key="Str.Settings.UseCuda">Use CUDA on NVIDIA GPUs (auto-download ~620 MB; Vulkan fallback; takes effect after restart)</sys:String>
     <sys:String x:Key="Str.Settings.AutoPreview">Auto-start ASR when no sidecar exists</sys:String>
     <sys:String x:Key="Str.Settings.Translate">Translation: use local model when available; otherwise source first</sys:String>
     <sys:String x:Key="Str.Settings.TranslateTarget">Translation language</sys:String>

@@ -24,12 +24,21 @@ internal static class AsrRuntime
         // Only effective before the first WhisperFactory load — native lib is sticky for the process.
         if (RuntimeOptions.LoadedLibrary is null)
         {
+            // Auto + NVIDIA + downloaded CUDA pack: CUDA first, Vulkan/CPU as fallback.
+            var cuda = pref == AsrBackends.Auto && CudaRuntime.Wanted(settings) && CudaRuntime.WhisperReady;
             var order = pref switch
             {
                 AsrBackends.Vulkan => new[] { RuntimeLibrary.Vulkan, RuntimeLibrary.Cpu },
                 AsrBackends.Cpu => new[] { RuntimeLibrary.Cpu },
+                _ when cuda => new[] { RuntimeLibrary.Cuda, RuntimeLibrary.Vulkan, RuntimeLibrary.Cpu },
                 _ => new[] { RuntimeLibrary.Vulkan, RuntimeLibrary.Cpu },
             };
+            if (cuda)
+            {
+                CudaRuntime.PrependPath();
+                // Whisper.net searches {dir of LibraryPath}/runtimes/cuda/win-x64 first, then the app dir.
+                RuntimeOptions.LibraryPath = Path.Combine(CudaRuntime.WhisperRoot, "whisper.dll");
+            }
             RuntimeOptions.RuntimeLibraryOrder = order.ToList();
         }
 

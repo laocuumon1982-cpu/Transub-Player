@@ -1058,6 +1058,7 @@
     <sys:String x:Key="Str.Settings.PreTranslate.OpenFolder">打开 Subs 文件夹</sys:String>
     <sys:String x:Key="Str.Settings.MtGpuShare">识别时翻译模型仍使用 GPU（半选 = 自动，显存 ≥ 8 GB）</sys:String>
     <sys:String x:Key="Str.Settings.MtGpuShare.Hint">大显存显卡（如 RTX 3060 12 GB）可同时运行 Whisper 与翻译模型，翻译更快。</sys:String>
+    <sys:String x:Key="Str.Settings.UseCuda">NVIDIA 显卡使用 CUDA（自动下载约 620 MB；失败回退 Vulkan；重启后生效）</sys:String>
     <sys:String x:Key="Str.Settings.AutoPreview">无成片字幕时，打开后自动开始原文提取</sys:String>
     <sys:String x:Key="Str.Settings.Translate">翻译：自动使用本机翻译模型；没有则先显示原文</sys:String>
     <sys:String x:Key="Str.Settings.TranslateTarget">译文语言</sys:String>
