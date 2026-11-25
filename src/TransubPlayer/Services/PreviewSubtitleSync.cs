@@ -415,6 +415,44 @@ internal sealed class PreviewSubtitleSync : IDisposable
     /// Prefer translating cues near the playhead (then chronological fill), so seeks into
     /// already-ASRed regions get Zh/Dual without waiting on the early backlog.
     /// </summary>
+    /// <summary>
+    /// Translate <paramref name="texts"/> in 8-line chunks concurrently (one request per llama slot).
+    /// Returns a 1-based index map over the whole list, same shape as <see cref="TranslateClient.ParseNumbered"/>.
+    /// </summary>
+    private async Task<Dictionary<int, string>> TranslateChunksConcurrentAsync(
+        List<string> texts,
+        MtRoute route,
+        string? profile,
+        CancellationToken ct)
+    {
+        const int chunk = 8;
+        var tasks = new List<Task<(int Offset, int Count, string Raw)>>();
+        for (var offset = 0; offset < texts.Count; offset += chunk)
+        {
+            var start = offset;
+            var slice = texts.Skip(start).Take(chunk).ToList();
+            tasks.Add(Task.Run(async () =>
+            {
+                using var translate = TranslateClient.ForUrl(_settings.TranslateUrl);
+                var raw = await translate.TranslateBatchAsync(slice, ct, route, profile, _settings.TranslateModelId)
+                    .ConfigureAwait(false);
+                return (start, slice.Count, raw);
+            }, ct));
+        }
+
+        var results = await Task.WhenAll(tasks).ConfigureAwait(false);
+        var map = new Dictionary<int, string>();
+        foreach (var (offset, count, raw) in results)
+        {
+            var part = TranslateClient.ParseNumbered(raw, count);
+            if (part.Count == 0)
+                _log("翻译模型返回无法解析：" + raw.Replace('\n', ' ')[..Math.Min(180, raw.Length)]);
+            foreach (var (k, v) in part)
+                map[offset + k] = v;
+        }
+        return map;
+    }
+
     public async Task TryTranslatePendingAsync()
     {
         if (_disposed || !_wantsPreviewMt()) return;
@@ -428,7 +466,8 @@ internal sealed class PreviewSubtitleSync : IDisposable
         List<Cue> pending;
         lock (_cueLock)
         {
-            pending = SelectPendingForMt(batchSize: 8);
+            // Several 8-cue batches at once — llama-server serves them on parallel slots.
+            pending = SelectPendingForMt(batchSize: 8 * Math.Clamp(_settings.MtParallel, 1, 8));
         }
 
         if (pending.Count == 0)
@@ -452,15 +491,11 @@ internal sealed class PreviewSubtitleSync : IDisposable
                 return;
             }
 
-            using var translate = TranslateClient.ForUrl(_settings.TranslateUrl);
             var route = _getMtRoute();
             var profile = _getContentProfile();
-            var raw = await translate.TranslateBatchAsync(
-                pending.Select(c => c.Text).ToList(), mtCt, route, profile, _settings.TranslateModelId).ConfigureAwait(false);
+            var map = await TranslateChunksConcurrentAsync(
+                pending.Select(c => c.Text).ToList(), route, profile, mtCt).ConfigureAwait(false);
             if (_disposed || mtCt.IsCancellationRequested || !ReferenceEquals(mtCts, _mtCts)) return;
-            var map = TranslateClient.ParseNumbered(raw, pending.Count);
-            if (map.Count == 0)
-                _log("翻译模型返回无法解析：" + raw.Replace('\n', ' ')[..Math.Min(180, raw.Length)]);
             var applied = 0;
             lock (_cueLock)
             {

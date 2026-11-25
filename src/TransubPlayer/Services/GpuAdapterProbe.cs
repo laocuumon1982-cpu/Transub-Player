@@ -29,6 +29,12 @@ internal static class GpuAdapterProbe
         }
     }
 
+    /// <summary>Dedicated VRAM (MB) of the preferred discrete GPU; 0 when unknown / none.</summary>
+    public static long PreferredDiscreteVramMb => PreferredDiscrete?.DedicatedVramMb ?? 0;
+
+    /// <summary>True when the machine has an NVIDIA GPU (CUDA candidate).</summary>
+    public static bool HasNvidia => Adapters.Any(a => a.IsNvidia);
+
     /// <summary>All hardware adapters from the last probe (empty on failure).</summary>
     public static IReadOnlyList<GpuAdapterInfo> Adapters
     {
@@ -145,7 +151,8 @@ internal static class GpuAdapterProbe
                         || name.Contains("Microsoft Basic Render", StringComparison.OrdinalIgnoreCase))
                         continue;
 
-                    list.Add(new GpuAdapterInfo(name, desc.VendorId, desc.DeviceId));
+                    list.Add(new GpuAdapterInfo(name, desc.VendorId, desc.DeviceId,
+                        (long)(desc.DedicatedVideoMemory.ToUInt64() / (1024UL * 1024UL))));
                 }
                 finally
                 {
@@ -227,7 +234,7 @@ internal static class GpuAdapterProbe
 }
 
 /// <summary>One DXGI hardware adapter.</summary>
-internal sealed record GpuAdapterInfo(string Description, uint VendorId, uint DeviceId)
+internal sealed record GpuAdapterInfo(string Description, uint VendorId, uint DeviceId, long DedicatedVramMb = 0)
 {
     public bool IsNvidia => VendorId == 0x10DE;
     public bool IsAmd => VendorId == 0x1002;

@@ -202,6 +202,14 @@ public partial class SettingsWindow : Window
             _lastContentSubMode = subMode;
         PreferExternalBox.IsChecked = _settings.PreferExternalSubtitle;
         SubtitleCatBox.IsChecked = _settings.FetchSubtitleFromSubtitleCat;
+        PreTranslateBox.IsChecked = _settings.PreTranslateBeforePlay;
+        // Three-state: indeterminate = auto (share when GPU ≥ 8 GB).
+        MtGpuShareBox.IsChecked = GpuShare.Normalize(_settings.MtGpuShare) switch
+        {
+            GpuShare.On => true,
+            GpuShare.Off => false,
+            _ => null,
+        };
         AutoPreviewBox.IsChecked = _settings.AutoStartPreview;
         TranslateBox.IsChecked = _settings.TranslateEnabled;
         SelectComboValue(
@@ -475,6 +483,13 @@ public partial class SettingsWindow : Window
         _settings.SubVisibleOnStart = !string.Equals(subMode, "off", StringComparison.OrdinalIgnoreCase);
         _settings.PreferExternalSubtitle = PreferExternalBox.IsChecked != false;
         _settings.FetchSubtitleFromSubtitleCat = SubtitleCatBox.IsChecked == true;
+        _settings.PreTranslateBeforePlay = PreTranslateBox.IsChecked == true;
+        _settings.MtGpuShare = MtGpuShareBox.IsChecked switch
+        {
+            true => GpuShare.On,
+            false => GpuShare.Off,
+            _ => GpuShare.Auto,
+        };
         _settings.AutoStartPreview = AutoPreviewBox.IsChecked != false;
         _settings.TranslateEnabled = TranslateBox.IsChecked == true;
         _settings.TranslateTarget = TranslateTargetBox.SelectedValue as string
@@ -1117,6 +1132,23 @@ public partial class SettingsWindow : Window
 
         if (PrefetchPlaylistBox is not null)
             PrefetchPlaylistBox.IsEnabled = autoPreview;
+    }
+
+    private void OpenSubLibrary_Click(object sender, RoutedEventArgs e)
+    {
+        try
+        {
+            var dir = TransubPlayer.Services.SubLibrary.Root(_settings);
+            Directory.CreateDirectory(dir);
+            System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo("explorer.exe", "\"" + dir + "\"")
+            {
+                UseShellExecute = true,
+            });
+        }
+        catch
+        {
+            // ignore
+        }
     }
 
     private void UiLanguageBox_SelectionChanged(object sender, SelectionChangedEventArgs e)

@@ -47,6 +47,19 @@ public sealed class AppSettings
     /// </summary>
     public string TranslateModelId { get; set; } = TranslateModels.TranslateGemma4B;
     public string TranslateUrl { get; set; } = "http://127.0.0.1:39281";
+    /// <summary>
+    /// Keep translation on GPU while Whisper runs: <c>auto</c> (discrete GPU ≥ 8 GB) | <c>on</c> | <c>off</c>.
+    /// </summary>
+    public string MtGpuShare { get; set; } = GpuShare.Auto;
+    /// <summary>Parallel llama-server slots / concurrent MT requests (1–8). Default 4.</summary>
+    public int MtParallel { get; set; } = 4;
+    /// <summary>
+    /// On open (no Vietnamese sidecar yet): pause, recognise + translate the whole video first,
+    /// save the subtitle into <see cref="SubLibraryDir"/>, then play with it — no live lag.
+    /// </summary>
+    public bool PreTranslateBeforePlay { get; set; } = true;
+    /// <summary>Folder where finished translated subtitles are saved. Empty = <c>Subs</c> next to the app.</summary>
+    public string SubLibraryDir { get; set; } = "";
     public bool AutoStartPreview { get; set; } = true;
     /// <summary>Pause after open until translated subtitle frontier covers WaitForZhMinutes.</summary>
     public bool WaitForFirstZhBeforePlay { get; set; }
@@ -357,6 +370,10 @@ public sealed class AppSettings
         TranslateModelId = copy.TranslateModelId;
         TranslateTarget = copy.TranslateTarget;
         TranslateUrl = copy.TranslateUrl;
+        MtGpuShare = GpuShare.Normalize(copy.MtGpuShare);
+        MtParallel = Math.Clamp(copy.MtParallel, 1, 8);
+        PreTranslateBeforePlay = copy.PreTranslateBeforePlay;
+        SubLibraryDir = copy.SubLibraryDir ?? "";
         AutoStartPreview = copy.AutoStartPreview;
         WaitForFirstZhBeforePlay = copy.WaitForFirstZhBeforePlay;
         PlayImmediatelyOnOpen = copy.PlayImmediatelyOnOpen;

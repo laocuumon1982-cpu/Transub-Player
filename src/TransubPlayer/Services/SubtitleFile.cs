@@ -208,6 +208,9 @@ internal static class SubtitleFile
     /// </summary>
     public static string? FindAutoSidecar(string mediaPath, AppSettings settings)
     {
+        // Finished pre-translated subtitle in the app's Subs folder wins (instant reopen).
+        if (settings.TranslateEnabled && SubLibrary.Find(settings, mediaPath) is { } lib)
+            return lib;
         if (!settings.TranslateEnabled || !TranslateTargets.IsVietnamese(settings))
             return FindExistingSubtitle(mediaPath);
         foreach (var s in FindAllExistingSidecars(mediaPath))

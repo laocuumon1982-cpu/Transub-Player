@@ -1050,6 +1050,14 @@
     <sys:String x:Key="Str.Settings.Subtitle.PreviewSample">Sample subtitle サンプル字幕</sys:String>
     <sys:String x:Key="Str.Settings.Subtitle.PreviewHint">サイズ、アウトライン、余白調整時のおよその見た目（実際の出力は mpv が描画）。</sys:String>
     <sys:String x:Key="Str.Settings.PreferExternal">サイドカー字幕（.srt／.ass）を優先；自動 ASR をスキップ</sys:String>
+    <sys:String x:Key="Str.Main.PreTranslate.Title">再生前に字幕を全文翻訳中</sys:String>
+    <sys:String x:Key="Str.Main.PreTranslate.Asr">ステップ 1/2 · 音声認識 {0}%（{1} / {2}）</sys:String>
+    <sys:String x:Key="Str.Main.PreTranslate.Mt">ステップ 2/2 · 翻訳 {0}%（{1}/{2} 行）</sys:String>
+    <sys:String x:Key="Str.Main.PreTranslate.Done">字幕を翻訳・保存しました · 再生します</sys:String>
+    <sys:String x:Key="Str.Settings.PreTranslate">再生前に動画全体を翻訳（Subs フォルダーに保存、遅延なし）</sys:String>
+    <sys:String x:Key="Str.Settings.PreTranslate.OpenFolder">Subs フォルダーを開く</sys:String>
+    <sys:String x:Key="Str.Settings.MtGpuShare">認識中も翻訳を GPU で実行（中間 = 自動、VRAM 8 GB 以上）</sys:String>
+    <sys:String x:Key="Str.Settings.MtGpuShare.Hint">大容量 GPU（例: RTX 3060 12 GB）では Whisper と翻訳を同時に実行でき、翻訳が速くなります。</sys:String>
     <sys:String x:Key="Str.Settings.AutoPreview">サイドカーがないとき ASR を自動開始</sys:String>
     <sys:String x:Key="Str.Settings.Translate">翻訳：利用可能ならローカルモデル；なければまず原文</sys:String>
     <sys:String x:Key="Str.Settings.TranslateTarget">訳文言語</sys:String>

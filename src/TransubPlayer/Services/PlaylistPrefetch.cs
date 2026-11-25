@@ -337,47 +337,79 @@ internal sealed class PlaylistPrefetch
         _log($"列表预生成完成 · {name}");
     }
 
-    private async Task PrefetchTranslateAsync(string mediaPath, SceneProfile scene, MtRoute route, CancellationToken ct)
+    private Task PrefetchTranslateAsync(string mediaPath, SceneProfile scene, MtRoute route, CancellationToken ct)
+        => TranslateFullAsync(_settings, mediaPath, scene, route, _ensureTranslate, progress: null, ct);
+
+    /// <summary>
+    /// Translate the finished source SRT of <paramref name="mediaPath"/> in full and write the
+    /// translated / dual / display preview SRTs + cache. Runs <see cref="AppSettings.MtParallel"/>
+    /// 8-line batches concurrently (one per llama-server slot).
+    /// </summary>
+    internal static async Task TranslateFullAsync(
+        AppSettings settings,
+        string mediaPath,
+        SceneProfile scene,
+        MtRoute route,
+        Func<CancellationToken, Task> ensureTranslate,
+        Action<int, int>? progress,
+        CancellationToken ct)
     {
         var source = PreviewPaths.SourceSrt(mediaPath);
         var cues = SubtitleFile.ParseSrt(source);
-        PreviewTextSanitize.CleanAsrCues(cues, _settings, scene.ContentProfile);
+        PreviewTextSanitize.CleanAsrCues(cues, settings, scene.ContentProfile);
         if (cues.Count == 0) return;
 
-        await _ensureTranslate(ct).ConfigureAwait(false);
-        using var translate = TranslateClient.ForUrl(_settings.TranslateUrl);
+        await ensureTranslate(ct).ConfigureAwait(false);
         const int batch = 8;
+        var parallel = Math.Clamp(settings.MtParallel, 1, 8);
         var work = cues.Where(c => !PreviewTextSanitize.IsPlaceholderText(c.Text)).ToList();
+        var slices = new List<List<Cue>>();
         for (var i = 0; i < work.Count; i += batch)
-        {
-            ct.ThrowIfCancellationRequested();
-            var slice = work.Skip(i).Take(batch).ToList();
-            if (slice.Count == 0) continue;
-            var raw = await translate.TranslateBatchAsync(
-                slice.Select(c => c.Text).ToList(), ct, route, scene.ContentProfile, _settings.TranslateModelId)
-                .ConfigureAwait(false);
-            var map = TranslateClient.ParseNumbered(raw, slice.Count);
-            for (var j = 0; j < slice.Count; j++)
-            {
-                if (!map.TryGetValue(j + 1, out var zh) || string.IsNullOrWhiteSpace(zh)) continue;
-                zh = PreviewTextSanitize.SanitizeMt(zh, slice[j].Text, _settings, scene.ContentProfile);
-                if (!PreviewTextSanitize.IsPlaceholderText(zh)
-                    && !PreviewTextSanitize.LooksLikeWrongTargetScript(zh, _settings.TranslateTarget))
-                    slice[j].Zh = zh;
-            }
-        }
+            slices.Add(work.Skip(i).Take(batch).ToList());
 
-        PreviewTextSanitize.UnstickCrossCue(cues, _settings);
+        var done = 0;
+        progress?.Invoke(0, work.Count);
+        using var gate = new SemaphoreSlim(parallel, parallel);
+        var tasks = slices.Select(async slice =>
+        {
+            await gate.WaitAsync(ct).ConfigureAwait(false);
+            try
+            {
+                ct.ThrowIfCancellationRequested();
+                using var translate = TranslateClient.ForUrl(settings.TranslateUrl);
+                var raw = await translate.TranslateBatchAsync(
+                    slice.Select(c => c.Text).ToList(), ct, route, scene.ContentProfile, settings.TranslateModelId)
+                    .ConfigureAwait(false);
+                var map = TranslateClient.ParseNumbered(raw, slice.Count);
+                for (var j = 0; j < slice.Count; j++)
+                {
+                    if (!map.TryGetValue(j + 1, out var zh) || string.IsNullOrWhiteSpace(zh)) continue;
+                    zh = PreviewTextSanitize.SanitizeMt(zh, slice[j].Text, settings, scene.ContentProfile);
+                    if (!PreviewTextSanitize.IsPlaceholderText(zh)
+                        && !PreviewTextSanitize.LooksLikeWrongTargetScript(zh, settings.TranslateTarget))
+                        slice[j].Zh = zh;
+                }
+            }
+            finally
+            {
+                gate.Release();
+                var n = Interlocked.Add(ref done, slice.Count);
+                progress?.Invoke(n, work.Count);
+            }
+        }).ToList();
+        await Task.WhenAll(tasks).ConfigureAwait(false);
+
+        PreviewTextSanitize.UnstickCrossCue(cues, settings);
         foreach (var c in cues)
         {
             if (PreviewTextSanitize.IsPlaceholderText(c.Zh) && !string.IsNullOrWhiteSpace(c.Zh))
                 c.Zh = null;
         }
 
-        SubtitleFile.WriteDisplaySrt(PreviewPaths.TranslatedPreviewSrt(mediaPath, _settings.TranslateTarget), cues, SubtitleDisplayMode.Zh);
+        SubtitleFile.WriteDisplaySrt(PreviewPaths.TranslatedPreviewSrt(mediaPath, settings.TranslateTarget), cues, SubtitleDisplayMode.Zh);
         SubtitleFile.WriteDisplaySrt(PreviewPaths.DualSrt(mediaPath), cues, SubtitleDisplayMode.Dual);
         SubtitleFile.WriteDisplaySrt(PreviewPaths.DisplaySrt(mediaPath), cues, SubtitleDisplayMode.Zh);
-        SaveTranslationCache(mediaPath, _settings.TranslateTarget, cues);
+        SaveTranslationCache(mediaPath, settings.TranslateTarget, cues);
     }
 
     public static void SaveTranslationCache(string mediaPath, string? translateTarget, IReadOnlyList<Cue> cues)

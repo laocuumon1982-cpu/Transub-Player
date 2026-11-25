@@ -1043,6 +1043,14 @@ velocidad [ / ] · pantalla completa F/F11/Intro · arriba T · ayuda F1
     <sys:String x:Key="Str.Settings.Subtitle.PreviewSample">Subtítulo de ejemplo 示例字幕</sys:String>
     <sys:String x:Key="Str.Settings.Subtitle.PreviewHint">Aspecto aproximado al ajustar tamaño, contorno y margen (mpv renderiza la salida real).</sys:String>
     <sys:String x:Key="Str.Settings.PreferExternal">Preferir subtítulos locales (.srt / .ass); omitir ASR automático</sys:String>
+    <sys:String x:Key="Str.Main.PreTranslate.Title">Traduciendo todo el subtítulo antes de reproducir</sys:String>
+    <sys:String x:Key="Str.Main.PreTranslate.Asr">Paso 1/2 · Reconociendo voz {0}% ({1} / {2})</sys:String>
+    <sys:String x:Key="Str.Main.PreTranslate.Mt">Paso 2/2 · Traduciendo {0}% ({1}/{2} líneas)</sys:String>
+    <sys:String x:Key="Str.Main.PreTranslate.Done">Subtítulo traducido y guardado · reproduciendo</sys:String>
+    <sys:String x:Key="Str.Settings.PreTranslate">Traducir todo el vídeo antes de reproducir (guardar en Subs, sin retraso)</sys:String>
+    <sys:String x:Key="Str.Settings.PreTranslate.OpenFolder">Abrir carpeta Subs</sys:String>
+    <sys:String x:Key="Str.Settings.MtGpuShare">Mantener la traducción en GPU durante el reconocimiento (relleno = auto, GPU ≥ 8 GB)</sys:String>
+    <sys:String x:Key="Str.Settings.MtGpuShare.Hint">Las GPU grandes (p. ej. RTX 3060 12 GB) ejecutan Whisper y el traductor a la vez: traducción mucho más rápida.</sys:String>
     <sys:String x:Key="Str.Settings.AutoPreview">Auto-start ASR when no local exists</sys:String>
     <sys:String x:Key="Str.Settings.Translate">Traducción: usar modelo local si está disponible; si no, primero el original</sys:String>
     <sys:String x:Key="Str.Settings.TranslateTarget">Idioma de traducción</sys:String>

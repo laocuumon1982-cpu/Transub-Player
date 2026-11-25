@@ -17,6 +17,10 @@ internal sealed class PreviewController : IDisposable
     private readonly SemaphoreSlim _translateGate = new(1, 1);
     private bool? _translateReady;
     private bool _translateRunningOnCpu;
+    private volatile bool _preTranslating;
+    private string _preTranslateTitle = "";
+    private string _preTranslateDetail = "";
+    private CancellationTokenSource? _preTranslateSkipCts;
     private SubtitleDisplayMode _displayMode;
     private SubtitleDisplayMode _lastContentMode = SubtitleDisplayMode.Zh;
     private readonly HashSet<string> _skipGapPrompts = new(StringComparer.OrdinalIgnoreCase);
@@ -209,7 +213,7 @@ internal sealed class PreviewController : IDisposable
     public IReadOnlyList<Cue> SnapshotCues() => _subs.SnapshotCues();
     public double SubFrontier => _subs.SubFrontier;
     public double ZhFrontier => _subs.ZhFrontier;
-    public bool WaitingForZh => _waitingForFirstZh || _waitingForModeReady;
+    public bool WaitingForZh => _waitingForFirstZh || _waitingForModeReady || _preTranslating;
     /// <summary>Mode/language coverage wait — show jump / switch-source actions on the wait overlay.</summary>
     public bool WaitShowsCoverageActions => _waitingForModeReady;
     public bool IsRetranslating => _retranslatingActive;
@@ -484,6 +488,13 @@ internal sealed class PreviewController : IDisposable
 
     public void SkipWaitForFirstZh()
     {
+        if (_preTranslating)
+        {
+            // Stop the full pre-translate and fall back to live (playhead-first) subtitles.
+            try { _preTranslateSkipCts?.Cancel(); } catch { /* ignore */ }
+            return;
+        }
+
         if (_waitingForModeReady)
         {
             FinishWaitForModeReady(play: true);
@@ -790,8 +801,9 @@ internal sealed class PreviewController : IDisposable
                      + " · 需与片同名（可带 .chs / _chs / -chs 等）或放在 Subs/字幕 子目录");
             }
 
-            var waitZh = pref == SubtitleSourceKind.Live && ShouldWaitForFirstZh() && existing is null;
-            var autoPlay = _settings.AutoPlayOnOpen && !waitZh;
+            var preTranslate = pref == SubtitleSourceKind.Live && existing is null && ShouldPreTranslate(path);
+            var waitZh = !preTranslate && pref == SubtitleSourceKind.Live && ShouldWaitForFirstZh() && existing is null;
+            var autoPlay = _settings.AutoPlayOnOpen && !waitZh && !preTranslate;
             ThrowIfStaleMedia(gen, ct);
             _mpvPlayUrl = path;
             _mpvPlayHeaders = null;
@@ -921,7 +933,10 @@ internal sealed class PreviewController : IDisposable
             // (do not Release here — that would briefly free the engine for prefetch).
             _manualPreviewNeeded = false;
             handOffToPreview = true;
-            _ = StartPreviewInBackgroundAsync(gen, ct);
+            if (preTranslate && ShouldPreTranslate(path))
+                _ = PreTranslateInBackgroundAsync(gen, ct);
+            else
+                _ = StartPreviewInBackgroundAsync(gen, ct);
         }
         finally
         {
@@ -1327,6 +1342,209 @@ internal sealed class PreviewController : IDisposable
     }
 
     /// <summary>Single-flight preview start: a newer run cancels the previous one.</summary>
+    /// <summary>Pre-translate mode: whole video ASR + MT before playing, saved to the Subs library.</summary>
+    private bool ShouldPreTranslate(string path)
+        => _settings.PreTranslateBeforePlay
+           && _settings.AutoStartPreview
+           && _settings.TranslateEnabled
+           && !_mtDisabledForSession
+           && !MediaSourceHelper.IsNonLocalMedia(path)
+           && File.Exists(path)
+           && TranslateModels.SupportsRoute(_settings.TranslateModelId, ActiveMtRoute)
+           && MtRoute.WantsTranslation(ActiveMtRoute);
+
+    private void SetPreTranslateProgress(string title, string detail)
+    {
+        _preTranslateTitle = title;
+        _preTranslateDetail = detail;
+        RefreshWaitZhOverlay();
+        StateChanged?.Invoke();
+    }
+
+    /// <summary>
+    /// Owns the open-phase hand-off like <see cref="StartPreviewInBackgroundAsync"/>: runs the full
+    /// pre-translate, then loads the finished subtitle and plays. On skip / failure falls back to live preview.
+    /// </summary>
+    private async Task PreTranslateInBackgroundAsync(int gen, CancellationToken ct)
+    {
+        var runCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
+        var prev = Interlocked.Exchange(ref _previewRunCts, runCts);
+        try { prev?.Cancel(); } catch { /* ignore */ }
+        DisposeCtsDeferred(prev);
+
+        var skipCts = new CancellationTokenSource();
+        var oldSkip = Interlocked.Exchange(ref _preTranslateSkipCts, skipCts);
+        try { oldSkip?.Cancel(); } catch { /* ignore */ }
+        using var linked = CancellationTokenSource.CreateLinkedTokenSource(runCts.Token, skipCts.Token);
+
+        var mediaPath = MediaPath;
+        var busyEpoch = _prefetch?.EnterLiveBusy() ?? 0;
+        string? saved = null;
+        var skipped = false;
+        _preTranslating = true;
+        try
+        {
+            if (mediaPath is not null)
+                saved = await PreTranslateFullAsync(mediaPath, gen, linked.Token).ConfigureAwait(false);
+        }
+        catch (OperationCanceledException)
+        {
+            skipped = skipCts.IsCancellationRequested && !runCts.IsCancellationRequested;
+        }
+        catch (Exception ex)
+        {
+            _log("Dịch trước toàn bộ thất bại: " + ex.Message);
+        }
+        finally
+        {
+            _preTranslating = false;
+            Interlocked.CompareExchange(ref _preTranslateSkipCts, null, skipCts);
+            if (ReferenceEquals(Volatile.Read(ref _previewRunCts), runCts))
+            {
+                Interlocked.CompareExchange(ref _previewRunCts, null, runCts);
+                DisposeCtsDeferred(runCts);
+            }
+            RefreshWaitZhOverlay();
+            StateChanged?.Invoke();
+        }
+
+        if (mediaPath is null || !IsCurrentMedia(gen, mediaPath))
+        {
+            _prefetch?.ReleaseLiveBusy(busyEpoch);
+            return;
+        }
+
+        if (saved is null)
+        {
+            // Skipped or failed: normal live preview (playhead first), and start playing now.
+            if (skipped)
+                ShowOsd(Loc.Get("Main.Osd.WaitZhSkipped"), 1800);
+            if (_settings.AutoPlayOnOpen)
+                StartPlaybackAfterSubtitleReady();
+            await StartPreviewInBackgroundAsync(gen, ct).ConfigureAwait(false);
+            return;
+        }
+
+        try
+        {
+            await CancelStaleEngineJobAsync().ConfigureAwait(false);
+        }
+        catch
+        {
+            // ignore
+        }
+        if (!IsCurrentMedia(gen, mediaPath))
+        {
+            _prefetch?.ReleaseLiveBusy(busyEpoch);
+            return;
+        }
+
+        InvalidateSidecarCache();
+        UsingExistingSub = true;
+        _subs.SetUsingExistingSub(true);
+        _externalOrigin = ExternalSubOrigin.Local;
+        ApplySub(saved);
+        EndBootstrap();
+        _prefetch?.ReleaseLiveBusy(busyEpoch);
+        if (_displayMode == SubtitleDisplayMode.Off)
+            SetDisplayMode(_lastContentMode);
+        PublishStatus(Loc.Get("Main.PreTranslate.Done"), "Đã dịch trước, lưu sub: " + saved);
+        ShowOsd(Loc.Get("Main.PreTranslate.Done"), 2200);
+        if (_settings.AutoPlayOnOpen)
+            StartPlaybackAfterSubtitleReady();
+        StateChanged?.Invoke();
+    }
+
+    /// <summary>Full-file ASR then concurrent MT; returns the subtitle saved in the Subs library, or null.</summary>
+    private async Task<string?> PreTranslateFullAsync(string mediaPath, int gen, CancellationToken ct)
+    {
+        var title = Loc.Get("Main.PreTranslate.Title");
+        SetPreTranslateProgress(title, Loc.Get("Main.Bootstrap.PleaseWait"));
+        var scene = ActiveScene;
+
+        if (!PreviewPaths.HasReadyAsr(mediaPath))
+        {
+            await _engine.EnsureReadyAsync(ct).ConfigureAwait(false);
+            var packs = await _engine.EnsureAsrModelAsync(ct).ConfigureAwait(false);
+            var asr = SceneProfiles.PickAsr(_settings.AsrModel, packs, scene.Language);
+            var outDir = PreviewPaths.OutDir(mediaPath);
+            Directory.CreateDirectory(outDir);
+            var body = new AsrJobRequest(mediaPath, outDir, scene.Language, asr, scene.ContentProfile,
+                KnownDurationSec: Duration);
+
+            using var pollCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
+            var poll = Task.Run(async () =>
+            {
+                var src = PreviewPaths.SourceSrt(mediaPath);
+                while (!pollCts.IsCancellationRequested)
+                {
+                    try
+                    {
+                        var dur = Duration;
+                        double done = 0;
+                        if (File.Exists(src))
+                        {
+                            var cues = SubtitleFile.ParseSrt(src);
+                            if (cues.Count > 0) done = cues[^1].End;
+                        }
+                        var pct = dur > 1 ? Math.Clamp(done / dur * 100, 0, 99) : 0;
+                        SetPreTranslateProgress(title, Loc.Format("Main.PreTranslate.Asr", (int)pct,
+                            MediaTimeFormat.Format(done), MediaTimeFormat.Format(dur)));
+                    }
+                    catch
+                    {
+                        // file mid-write
+                    }
+                    try { await Task.Delay(1500, pollCts.Token).ConfigureAwait(false); }
+                    catch (OperationCanceledException) { break; }
+                }
+            });
+
+            bool ok;
+            try
+            {
+                ok = await _engine.RunJobAndWaitAsync(body, ct, shouldAbort: () => !IsCurrentMedia(gen, mediaPath))
+                    .ConfigureAwait(false);
+            }
+            finally
+            {
+                pollCts.Cancel();
+                try { await poll.ConfigureAwait(false); } catch { /* ignore */ }
+            }
+
+            ct.ThrowIfCancellationRequested();
+            if (!ok || !IsCurrentMedia(gen, mediaPath)) return null;
+            PreviewPaths.MarkAsrDone(mediaPath);
+        }
+
+        var route = MtRoute.Resolve(scene.Language, _settings.TranslateTarget, scene.ContentProfile);
+        if (!MtRoute.WantsTranslation(route) || !TranslateModels.SupportsRoute(_settings.TranslateModelId, route))
+            return null;
+
+        SetPreTranslateProgress(title, Loc.Get("Main.Bootstrap.PreparingTranslate"));
+        // ASR is finished — give MT the whole GPU.
+        await EnsureTranslateAsync(ct, forceGpuRestart: true).ConfigureAwait(false);
+        if (_translateReady != true) return null;
+
+        await PlaylistPrefetch.TranslateFullAsync(
+                _settings,
+                mediaPath,
+                scene,
+                route,
+                _ => Task.CompletedTask,
+                (done, total) => SetPreTranslateProgress(title, Loc.Format("Main.PreTranslate.Mt",
+                    total > 0 ? done * 100 / total : 0, done, total)),
+                ct)
+            .ConfigureAwait(false);
+        ct.ThrowIfCancellationRequested();
+
+        var translated = PreviewPaths.TranslatedPreviewSrt(mediaPath, _settings.TranslateTarget);
+        if (!File.Exists(translated)) return null;
+        var saved = SubLibrary.Save(_settings, mediaPath, translated);
+        _log("Sub đã dịch lưu tại: " + saved);
+        return saved;
+    }
+
     private async Task StartPreviewInBackgroundAsync(int gen, CancellationToken ct)
     {
         var runCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
@@ -3701,6 +3919,13 @@ internal sealed class PreviewController : IDisposable
             return;
         }
 
+        if (_preTranslating)
+        {
+            WaitZhOverlayTitle = _preTranslateTitle;
+            WaitZhOverlayDetail = _preTranslateDetail;
+            return;
+        }
+
         if (!_waitingForFirstZh)
         {
             WaitZhOverlayTitle = "";
@@ -4161,6 +4386,7 @@ internal sealed class PreviewController : IDisposable
     private async Task DemoteTranslateGpuForAsrAsync(CancellationToken ct)
     {
         if (_disposed != 0 || _llama is null) return;
+        if (GpuShare.MtCanShareWithAsr(_settings)) return; // big GPU: keep MT on GPU alongside Whisper
         // OpenMedia clears _translateReady without Stop — demote by process state, not readiness flag.
         if (_translateRunningOnCpu) return;
         if (_llama.Spawned != true && _translateReady != true) return;
@@ -4184,7 +4410,8 @@ internal sealed class PreviewController : IDisposable
 
     private async Task EnsureTranslateGpuUpgradeAsync(CancellationToken ct)
     {
-        if (_disposed != 0 || !_translateRunningOnCpu || _engine.HasActiveJob) return;
+        if (_disposed != 0 || !_translateRunningOnCpu) return;
+        if (_engine.HasActiveJob && !GpuShare.MtCanShareWithAsr(_settings)) return;
         await EnsureTranslateAsync(ct, forceGpuRestart: true).ConfigureAwait(false);
         await _subs.TryTranslatePendingAsync().ConfigureAwait(false);
     }
@@ -4247,7 +4474,8 @@ internal sealed class PreviewController : IDisposable
             {
                 // Keep Whisper VRAM while a job is active/winding down, or when prefetch
                 // asks for CPU-only MT so Vulkan ASR is not contested by llama ngl=99.
-                var asrHoldsGpu = _engine.HasActiveJob || preferCpu;
+                var shareGpu = GpuShare.MtCanShareWithAsr(_settings);
+                var asrHoldsGpu = !shareGpu && (_engine.HasActiveJob || preferCpu);
                 if (forceGpuRestart && _translateRunningOnCpu && !asrHoldsGpu)
                 {
                     _llama?.Stop();
@@ -4266,7 +4494,7 @@ internal sealed class PreviewController : IDisposable
                         _translateReady = null;
                     }
                     // Prefetch may have left llama on GPU — demote before overlapping Whisper.
-                    else if (preferCpu && !_translateRunningOnCpu && _llama?.Spawned == true)
+                    else if (preferCpu && !shareGpu && !_translateRunningOnCpu && _llama?.Spawned == true)
                     {
                         _llama.Stop();
                         _translateReady = null;
@@ -4277,7 +4505,8 @@ internal sealed class PreviewController : IDisposable
                     }
                 }
 
-                if (!asrHoldsGpu)
+                // Shared mode keeps Whisper's GPU factory loaded — both fit in VRAM.
+                if (!asrHoldsGpu && !shareGpu)
                     await _engine.ReleaseGpuAsync(ct).ConfigureAwait(false);
 
                 if (_disposed != 0) return;

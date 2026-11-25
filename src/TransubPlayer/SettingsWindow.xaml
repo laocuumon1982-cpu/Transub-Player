@@ -523,6 +523,12 @@
                                     <TextBlock Style="{StaticResource Hint}" Text="{loc:Loc Settings.General.LiveSourceHint}"/>
                                     <CheckBox x:Name="PreferExternalBox" Content="{loc:Loc Settings.PreferExternal}"/>
                                     <CheckBox x:Name="SubtitleCatBox" Content="{loc:Loc Settings.SubtitleCat.Fetch}"/>
+                                    <CheckBox x:Name="PreTranslateBox" Content="{loc:Loc Settings.PreTranslate}"/>
+                                    <StackPanel Orientation="Horizontal" Margin="22,0,0,8">
+                                        <Button x:Name="OpenSubLibraryButton" Content="{loc:Loc Settings.PreTranslate.OpenFolder}" Click="OpenSubLibrary_Click" Padding="10,3"/>
+                                    </StackPanel>
+                                    <CheckBox x:Name="MtGpuShareBox" Content="{loc:Loc Settings.MtGpuShare}" IsThreeState="True"/>
+                                    <TextBlock Style="{StaticResource Hint}" Text="{loc:Loc Settings.MtGpuShare.Hint}"/>
                                     <CheckBox x:Name="AutoPreviewBox" Content="{loc:Loc Settings.AutoPreview}"
                                               Checked="DependencyGate_Changed" Unchecked="DependencyGate_Changed"/>
                                     <CheckBox x:Name="TranslateBox" Content="{loc:Loc Settings.Translate}"

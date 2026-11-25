@@ -213,7 +213,7 @@ internal sealed class LlamaServerProcess : IDisposable
             Stop();
             try
             {
-                StartOnce(exe, model, port, ngl, log);
+                StartOnce(exe, model, port, ngl, Math.Clamp(settings.MtParallel, 1, 8), log);
                 // Shorter waits when we already know GPU is contended.
                 var timeoutSec = preferCpu
                     ? (ngl == 0 ? 120 : 45)
@@ -254,7 +254,7 @@ internal sealed class LlamaServerProcess : IDisposable
         Spawned = false;
     }
 
-    private void StartOnce(string exe, string model, int port, int ngl, Action<string>? log)
+    private void StartOnce(string exe, string model, int port, int ngl, int parallel, Action<string>? log)
     {
         if (string.IsNullOrWhiteSpace(exe) || string.IsNullOrWhiteSpace(model))
             throw new InvalidOperationException("llama-server 或 GGUF 路径为空");
@@ -274,7 +274,9 @@ internal sealed class LlamaServerProcess : IDisposable
             "-m", model,
             "--host", "127.0.0.1",
             "--port", port.ToString(),
-            "-c", "4096",
+            // Each parallel slot gets its own 4k window so concurrent subtitle batches do not truncate.
+            "-c", (4096 * parallel).ToString(),
+            "--parallel", parallel.ToString(),
             "-ngl", ngl.ToString(),
             "-a", "hymt",
         })
